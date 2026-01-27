@@ -47,6 +47,23 @@ function parseSSE(text: string): string {
 }
 
 /**
+ * Extract result from a JSON response object.
+ * Handles both {"result": "..."} and plain text responses.
+ */
+function extractResult(text: string): string {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (parsed && typeof parsed === 'object' && 'result' in parsed) {
+      const result = (parsed as { result: unknown }).result;
+      return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+    }
+    return typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2);
+  } catch {
+    return text;
+  }
+}
+
+/**
  * Invoke an AgentCore Runtime and stream the response chunks.
  * Yields text chunks as they arrive from the SSE stream.
  */
@@ -75,13 +92,17 @@ export async function* invokeAgentRuntimeStreaming(
   const reader = webStream.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let fullResponse = '';
+  let yieldedContent = false;
 
   try {
     while (true) {
       const result = await reader.read();
       if (result.done) break;
 
-      buffer += decoder.decode(result.value as Uint8Array, { stream: true });
+      const decoded = decoder.decode(result.value as Uint8Array, { stream: true });
+      buffer += decoded;
+      fullResponse += decoded;
 
       // Process complete lines from the buffer
       const lines = buffer.split('\n');
@@ -96,18 +117,26 @@ export async function* invokeAgentRuntimeStreaming(
         }
         if (content) {
           yield content;
+          yieldedContent = true;
         }
       }
     }
 
-    // Process any remaining content in the buffer
+    // Process any remaining content in the buffer for SSE
     if (buffer) {
       const { content, error } = parseSSELine(buffer);
       if (error) {
         yield `Error: ${error}`;
+        return;
       } else if (content) {
         yield content;
+        yieldedContent = true;
       }
+    }
+
+    // If no SSE content was found, treat as plain JSON response
+    if (!yieldedContent && fullResponse.trim()) {
+      yield extractResult(fullResponse.trim());
     }
   } finally {
     reader.releaseLock();
@@ -144,5 +173,6 @@ export async function invokeAgentRuntime(options: InvokeAgentRuntimeOptions): Pr
     return parseSSE(text);
   }
 
-  return text;
+  // Handle plain JSON response (non-streaming frameworks)
+  return extractResult(text);
 }

@@ -45,8 +45,26 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Extract result from a JSON response object.
+ * Handles both {"result": "..."} and plain text responses.
+ */
+function extractResult(text: string): string {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (parsed && typeof parsed === 'object' && 'result' in parsed) {
+      const result = (parsed as { result: unknown }).result;
+      return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+    }
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return text;
+  }
+}
+
+/**
  * Invokes an agent on the local dev server and streams the response.
  * Yields text chunks as they arrive from the SSE stream.
+ * Also handles non-streaming JSON responses from frameworks that don't support streaming.
  */
 export async function* invokeAgentStreaming(port: number, message: string): AsyncGenerator<string, void, unknown> {
   const maxRetries = 5;
@@ -69,6 +87,8 @@ export async function* invokeAgentStreaming(port: number, message: string): Asyn
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let fullResponse = '';
+      let yieldedContent = false;
 
       try {
         while (true) {
@@ -76,7 +96,9 @@ export async function* invokeAgentStreaming(port: number, message: string): Asyn
           if (result.done) break;
 
           const chunk = result.value as Uint8Array;
-          buffer += decoder.decode(chunk, { stream: true });
+          const decoded = decoder.decode(chunk, { stream: true });
+          buffer += decoded;
+          fullResponse += decoded;
 
           // Process complete lines from buffer
           const lines = buffer.split('\n');
@@ -90,18 +112,26 @@ export async function* invokeAgentStreaming(port: number, message: string): Asyn
             }
             if (content) {
               yield content;
+              yieldedContent = true;
             }
           }
         }
 
-        // Process remaining buffer
+        // Process remaining buffer for SSE content
         if (buffer) {
           const { content, error } = parseSSELine(buffer);
           if (error) {
             yield `Error: ${error}`;
+            return;
           } else if (content) {
             yield content;
+            yieldedContent = true;
           }
+        }
+
+        // If no SSE content was found, treat as plain JSON response
+        if (!yieldedContent && fullResponse.trim()) {
+          yield extractResult(fullResponse.trim());
         }
       } finally {
         reader.releaseLock();
@@ -149,13 +179,8 @@ export async function invokeAgent(port: number, message: string): Promise<string
         return parseSSE(text);
       }
 
-      // Try to parse as JSON, otherwise return raw text
-      try {
-        const data: unknown = JSON.parse(text);
-        return JSON.stringify(data, null, 2);
-      } catch {
-        return text;
-      }
+      // Handle plain JSON response (non-streaming frameworks)
+      return extractResult(text);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
       // Only retry on connection errors (server not ready)
