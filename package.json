@@ -28,6 +28,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "secrets:check": "secretlint '**/*'",
+    "security:audit": "npm audit --audit-level=high",
     "clean": "rm -rf dist",
     "prepare": "husky"
   },
@@ -74,7 +75,9 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.26",
+    "eslint-plugin-security": "^3.0.1",
     "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
     "secretlint": "^11.3.0",
     "typescript": "^5",
@@ -82,5 +85,16 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --max-warnings=0"
+    ],
+    "*.{ts,tsx,js,jsx,json,md,css,html}": [
+      "prettier --check"
+    ],
+    "*": [
+      "secretlint"
+    ]
   }
 }
