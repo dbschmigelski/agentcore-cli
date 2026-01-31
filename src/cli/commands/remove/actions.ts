@@ -1,21 +1,21 @@
 import { ConfigIO } from '../../../lib';
+import { getErrorMessage } from '../../errors';
 import {
-  previewRemoveAgent,
-  removeAgent,
-  previewRemoveGateway,
-  removeGateway,
-  previewRemoveMcpTool,
-  removeMcpTool,
   getRemovableMcpTools,
-  previewRemoveMemory,
-  removeMemory,
+  previewRemoveAgent,
+  previewRemoveGateway,
   previewRemoveIdentity,
-  removeIdentity,
+  previewRemoveMcpTool,
+  previewRemoveMemory,
   previewRemoveTarget,
+  removeAgent,
+  removeGateway,
+  removeIdentity,
+  removeMcpTool,
+  removeMemory,
   removeTarget,
 } from '../../operations/remove';
-import { getErrorMessage } from '../../errors';
-import type { ResourceType, RemoveResult, RemoveAllOptions } from './types';
+import type { RemoveAllOptions, RemoveResult, ResourceType } from './types';
 
 export interface ValidatedRemoveOptions {
   resourceType: ResourceType;
@@ -31,7 +31,9 @@ export async function handleRemove(options: ValidatedRemoveOptions): Promise<Rem
       case 'agent': {
         const preview = await previewRemoveAgent(name);
         if (preview.blockers && preview.blockers.length > 0) {
-          const blockerMsg = preview.blockers.map(b => `${b.resourceType} '${b.resourceName}' has dependents: ${b.dependents.join(', ')}`).join('; ');
+          const blockerMsg = preview.blockers
+            .map(b => `${b.resourceType} '${b.resourceName}' has dependents: ${b.dependents.join(', ')}`)
+            .join('; ');
           return { success: false, error: `Cannot remove agent: ${blockerMsg}` };
         }
         const result = await removeAgent(name);
@@ -87,7 +89,7 @@ export async function handleRemove(options: ValidatedRemoveOptions): Promise<Rem
         return { success: true, resourceType, resourceName: name, message: `Removed target '${name}'` };
       }
       default:
-        return { success: false, error: `Unknown resource type: ${resourceType}` };
+        return { success: false, error: `Unknown resource type: ${resourceType as string}` };
     }
   } catch (err) {
     return { success: false, error: getErrorMessage(err) };
@@ -97,7 +99,7 @@ export async function handleRemove(options: ValidatedRemoveOptions): Promise<Rem
 export async function handleRemoveAll(_options: RemoveAllOptions): Promise<RemoveResult> {
   try {
     const configIO = new ConfigIO();
-    
+
     // Get current project name to preserve it
     let projectName = 'Project';
     try {
