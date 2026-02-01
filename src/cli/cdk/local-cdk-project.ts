@@ -32,6 +32,7 @@ export class LocalCdkProject {
    */
   exists(): boolean {
     const packageJson = path.join(this.projectDir, 'package.json');
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     return fs.existsSync(this.projectDir) && fs.existsSync(packageJson);
   }
 
@@ -40,11 +41,13 @@ export class LocalCdkProject {
    * Throws an error if the project is missing or invalid.
    */
   validate(): void {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     if (!fs.existsSync(this.projectDir)) {
       throw new Error(`CDK project not found at ${this.projectDir}. Run 'agentcore create' first.`);
     }
 
     const packageJson = path.join(this.projectDir, 'package.json');
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     if (!fs.existsSync(packageJson)) {
       throw new Error(`Invalid CDK project: missing package.json in ${this.projectDir}`);
     }
@@ -70,5 +73,60 @@ export class LocalCdkProject {
       const errorOutput = result.stderr || result.stdout || `npm run build exited with code ${result.code}`;
       throw new Error(errorOutput);
     }
+  }
+
+  /**
+   * Ensure the L3 constructs package is available.
+   * Handles multiple scenarios:
+   * 1. Local development: tries npm link
+   * 2. Beta testing: package installed globally from tarball
+   * 3. Production: package available from npm registry
+   */
+  async ensureL3Link(): Promise<void> {
+    // First, check if the package is already available (installed or linked)
+    const checkResult = await runSubprocessCapture('npm', ['list', '@aws/agentcore-l3-cdk-constructs', '--depth=0'], {
+      cwd: this.projectDir,
+    });
+
+    // If package is already available, we're good
+    if (checkResult.code === 0 && !checkResult.stdout.includes('UNMET')) {
+      return;
+    }
+
+    // Try to link the package (works for local development)
+    const linkResult = await runSubprocessCapture('npm', ['link', '@aws/agentcore-l3-cdk-constructs'], {
+      cwd: this.projectDir,
+    });
+
+    if (linkResult.code === 0) {
+      return; // Link succeeded
+    }
+
+    // Link failed - check if package is globally installed (beta testing scenario)
+    const globalListResult = await runSubprocessCapture(
+      'npm',
+      ['list', '-g', '@aws/agentcore-l3-cdk-constructs', '--depth=0'],
+      {
+        cwd: this.projectDir,
+      }
+    );
+
+    if (globalListResult.code === 0 && !globalListResult.stdout.includes('(empty)')) {
+      // Package is globally installed, try to install it locally from global
+      const installResult = await runSubprocessCapture('npm', ['install', '@aws/agentcore-l3-cdk-constructs'], {
+        cwd: this.projectDir,
+      });
+
+      if (installResult.code === 0) {
+        return; // Successfully installed from global/registry
+      }
+    }
+
+    // If we get here, the package isn't available
+    throw new Error(
+      '@aws/agentcore-l3-cdk-constructs is not available. ' +
+        'For local development, run: npm link @aws/agentcore-l3-cdk-constructs. ' +
+        'For beta testing, ensure the package is installed globally first.'
+    );
   }
 }
