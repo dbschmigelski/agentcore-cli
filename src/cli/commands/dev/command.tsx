@@ -77,7 +77,7 @@ export const registerDev = (program: Command) => {
       }
 
       if (!project.agents || project.agents.length === 0) {
-        render(<FatalError message="No agents defined in project." suggestedCommand="agentcore create" />);
+        render(<FatalError message="No agents defined in project." suggestedCommand="agentcore add agent" />);
         process.exit(1);
       }
 

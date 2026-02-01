@@ -162,8 +162,8 @@ export function AttachFlow(props: { onExit: () => void }) {
   if (agents.length === 0) {
     return (
       <ErrorPrompt
-        message="No agents in project"
-        detail="Add an agent first using the 'add' command."
+        message="No agents in project."
+        detail="Run 'agentcore add agent' first."
         onBack={props.onExit}
         onExit={props.onExit}
       />
