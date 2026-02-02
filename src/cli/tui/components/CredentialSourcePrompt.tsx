@@ -62,7 +62,7 @@ export function CredentialSourcePrompt({
     } else if (key.downArrow) {
       setSelectedIndex(prev => (prev < SOURCE_OPTIONS.length - 1 ? prev + 1 : 0));
     } else if (key.return) {
-      const selectedOption = SOURCE_OPTIONS[selectedIndex];
+      const selectedOption = SOURCE_OPTIONS.at(selectedIndex);
       if (selectedOption?.id === 'env-local') {
         onUseEnvLocal();
       } else if (selectedOption?.id === 'manual') {
@@ -74,19 +74,25 @@ export function CredentialSourcePrompt({
   });
 
   // Manual entry phase - collect each credential one by one
-  if (phase === 'manual-entry') {
-    const currentCredential = missingCredentials[currentCredentialIndex];
-    if (!currentCredential || currentCredentialIndex >= missingCredentials.length) {
-      // All credentials collected, submit
+  // When all credentials are collected, trigger submission via effect (not during render)
+  const allCredentialsCollected = phase === 'manual-entry' && currentCredentialIndex >= missingCredentials.length;
+
+  React.useEffect(() => {
+    if (allCredentialsCollected) {
       onManualEntry(manualCredentials);
+    }
+  }, [allCredentialsCollected, manualCredentials, onManualEntry]);
+
+  if (phase === 'manual-entry') {
+    const currentCredential = missingCredentials.at(currentCredentialIndex);
+    if (!currentCredential || allCredentialsCollected) {
+      // Waiting for effect to trigger onManualEntry
       return null;
     }
 
     const handleSubmit = (value: string) => {
-      setManualCredentials(prev => ({
-        ...prev,
-        [currentCredential.envVarName]: value,
-      }));
+      const envVarName = currentCredential.envVarName;
+      setManualCredentials(prev => Object.assign({}, prev, { [envVarName]: value }));
       setCurrentCredentialIndex(prev => prev + 1);
     };
 
