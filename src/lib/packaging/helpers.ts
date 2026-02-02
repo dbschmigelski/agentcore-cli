@@ -379,43 +379,111 @@ const KNOWN_CONSOLE_SCRIPTS: Record<string, [string, string]> = {
 };
 
 /**
- * Converts Windows .exe console scripts to Linux-compatible shell scripts.
- * This is necessary when packaging Python dependencies on Windows for deployment
- * to Linux-based AWS runtimes.
- *
- * @param stagingDir The directory containing installed Python packages
+ * Checks if a shebang line contains a hardcoded absolute path that won't work in Lambda.
  */
-export async function convertWindowsScriptsToLinux(stagingDir: string): Promise<void> {
-  if (!isWindows) {
-    return; // Only needed when building on Windows
-  }
+function isHardcodedShebang(shebang: string): boolean {
+  return /^#!\/(?:Users|home|opt|var|tmp)\/.*python/.test(shebang);
+}
 
+/**
+ * Rewrites shebangs in console scripts to use portable #!/usr/bin/env python3.
+ * This handles scripts installed on macOS/Linux that have hardcoded absolute paths.
+ */
+async function rewriteUnixShebangs(stagingDir: string): Promise<void> {
   const binDir = join(stagingDir, 'bin');
   if (!(await pathExists(binDir))) {
     return;
   }
 
   const entries = await readdir(binDir);
+  const portableShebang = '#!/usr/bin/env python3';
 
   for (const entry of entries) {
-    if (!entry.endsWith('.exe')) {
+    const scriptPath = join(binDir, entry);
+    const stats = await stat(scriptPath);
+
+    if (!stats.isFile()) {
       continue;
     }
 
-    const scriptName = entry.slice(0, -4); // Remove .exe extension
-    const entryPoint = KNOWN_CONSOLE_SCRIPTS[scriptName];
+    const content = await readFile(scriptPath, 'utf-8');
+    const firstLine = content.split('\n')[0] ?? '';
 
-    if (entryPoint) {
-      const [modulePath, funcName] = entryPoint;
-      const exePath = join(binDir, entry);
-      const scriptPath = join(binDir, scriptName);
+    if (firstLine && isHardcodedShebang(firstLine)) {
+      const newContent = content.replace(firstLine, portableShebang);
+      await writeFile(scriptPath, newContent, { mode: 0o755 });
+    }
+  }
+}
 
-      // Remove the Windows .exe file
-      await unlink(exePath);
+/**
+ * Prepares console scripts for Linux deployment by:
+ * - On Windows: Converting .exe files to Linux shell scripts
+ * - On macOS/Linux: Rewriting hardcoded shebang paths to portable ones
+ *
+ * @param stagingDir The directory containing installed Python packages
+ */
+export async function convertWindowsScriptsToLinux(stagingDir: string): Promise<void> {
+  if (isWindows) {
+    const binDir = join(stagingDir, 'bin');
+    if (!(await pathExists(binDir))) {
+      return;
+    }
 
-      // Create Linux-compatible shell script
-      const scriptContent = generateLinuxConsoleScript(modulePath, funcName);
-      await writeFile(scriptPath, scriptContent, { mode: 0o755 });
+    const entries = await readdir(binDir);
+
+    for (const entry of entries) {
+      if (!entry.endsWith('.exe')) {
+        continue;
+      }
+
+      const scriptName = entry.slice(0, -4); // Remove .exe extension
+      const entryPoint = KNOWN_CONSOLE_SCRIPTS[scriptName];
+
+      if (entryPoint) {
+        const [modulePath, funcName] = entryPoint;
+        const exePath = join(binDir, entry);
+        const scriptPath = join(binDir, scriptName);
+
+        // Remove the Windows .exe file
+        await unlink(exePath);
+
+        // Create Linux-compatible shell script
+        const scriptContent = generateLinuxConsoleScript(modulePath, funcName);
+        await writeFile(scriptPath, scriptContent, { mode: 0o755 });
+      }
+    }
+  } else {
+    await rewriteUnixShebangs(stagingDir);
+  }
+}
+
+/**
+ * Synchronous version of rewriteUnixShebangs.
+ */
+function rewriteUnixShebangsSync(stagingDir: string): void {
+  const binDir = join(stagingDir, 'bin');
+  if (!pathExistsSync(binDir)) {
+    return;
+  }
+
+  const entries = readdirSync(binDir);
+  const portableShebang = '#!/usr/bin/env python3';
+
+  for (const entry of entries) {
+    const scriptPath = join(binDir, entry);
+    const stats = statSync(scriptPath);
+
+    if (!stats.isFile()) {
+      continue;
+    }
+
+    const content = readFileSync(scriptPath, 'utf-8');
+    const firstLine = content.split('\n')[0] ?? '';
+
+    if (firstLine && isHardcodedShebang(firstLine)) {
+      const newContent = content.replace(firstLine, portableShebang);
+      writeFileSync(scriptPath, newContent, { mode: 0o755 });
     }
   }
 }
@@ -424,36 +492,36 @@ export async function convertWindowsScriptsToLinux(stagingDir: string): Promise<
  * Synchronous version of convertWindowsScriptsToLinux.
  */
 export function convertWindowsScriptsToLinuxSync(stagingDir: string): void {
-  if (!isWindows) {
-    return; // Only needed when building on Windows
-  }
-
-  const binDir = join(stagingDir, 'bin');
-  if (!pathExistsSync(binDir)) {
-    return;
-  }
-
-  const entries = readdirSync(binDir);
-
-  for (const entry of entries) {
-    if (!entry.endsWith('.exe')) {
-      continue;
+  if (isWindows) {
+    const binDir = join(stagingDir, 'bin');
+    if (!pathExistsSync(binDir)) {
+      return;
     }
 
-    const scriptName = entry.slice(0, -4); // Remove .exe extension
-    const entryPoint = KNOWN_CONSOLE_SCRIPTS[scriptName];
+    const entries = readdirSync(binDir);
 
-    if (entryPoint) {
-      const [modulePath, funcName] = entryPoint;
-      const exePath = join(binDir, entry);
-      const scriptPath = join(binDir, scriptName);
+    for (const entry of entries) {
+      if (!entry.endsWith('.exe')) {
+        continue;
+      }
 
-      // Remove the Windows .exe file
-      unlinkSync(exePath);
+      const scriptName = entry.slice(0, -4); // Remove .exe extension
+      const entryPoint = KNOWN_CONSOLE_SCRIPTS[scriptName];
 
-      // Create Linux-compatible shell script
-      const scriptContent = generateLinuxConsoleScript(modulePath, funcName);
-      writeFileSync(scriptPath, scriptContent, { mode: 0o755 });
+      if (entryPoint) {
+        const [modulePath, funcName] = entryPoint;
+        const exePath = join(binDir, entry);
+        const scriptPath = join(binDir, scriptName);
+
+        // Remove the Windows .exe file
+        unlinkSync(exePath);
+
+        // Create Linux-compatible shell script
+        const scriptContent = generateLinuxConsoleScript(modulePath, funcName);
+        writeFileSync(scriptPath, scriptContent, { mode: 0o755 });
+      }
     }
+  } else {
+    rewriteUnixShebangsSync(stagingDir);
   }
 }

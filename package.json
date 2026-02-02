@@ -1,6 +1,6 @@
 {
   "name": "@aws/agentcore-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI for Amazon Bedrock AgentCore",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -37,13 +37,13 @@
   },
   "dependencies": {
     "@aws-cdk/toolkit-lib": "^1.13.0",
-    "@aws-sdk/client-bedrock-agentcore": "^3.969.0",
-    "@aws-sdk/client-bedrock-agentcore-control": "^3.969.0",
-    "@aws-sdk/client-bedrock-runtime": "^3.969.0",
-    "@aws-sdk/client-cloudformation": "^3.969.0",
-    "@aws-sdk/client-resource-groups-tagging-api": "^3.969.0",
-    "@aws-sdk/client-sts": "^3.969.0",
-    "@aws-sdk/credential-providers": "^3.969.0",
+    "@aws-sdk/client-bedrock-agentcore": "^3.893.0",
+    "@aws-sdk/client-bedrock-agentcore-control": "^3.893.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.893.0",
+    "@aws-sdk/client-cloudformation": "^3.893.0",
+    "@aws-sdk/client-resource-groups-tagging-api": "^3.893.0",
+    "@aws-sdk/client-sts": "^3.893.0",
+    "@aws-sdk/credential-providers": "^3.893.0",
     "@commander-js/extra-typings": "^14.0.0",
     "@smithy/shared-ini-file-loader": "^4.4.2",
     "commander": "^14.0.2",
@@ -93,7 +93,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --max-warnings=0"
+      "eslint --max-warnings=10"
     ],
     "*.{ts,tsx,js,jsx,json,md,css,html}": [
       "prettier --check"

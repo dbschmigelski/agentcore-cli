@@ -36,7 +36,8 @@ abstracted through utilities in `lib/utils/platform.ts`.
 1. **Never hardcode Unix paths** - Use `getVenvExecutable()` for Python venv paths
 2. **Use platform utilities** - Import from `lib/utils/platform` instead of checking `process.platform` directly
 3. **Test on both platforms** - Ensure features work on Windows and Unix
-4. **Avoid Unix-specific commands** - Use Node.js APIs or cross-platform alternatives (e.g., Node.js fs instead of `rm -rf`)
+4. **Avoid Unix-specific commands** - Use Node.js APIs or cross-platform alternatives (e.g., Node.js fs instead of
+   `rm -rf`)
 5. **Document platform differences** - Add comments explaining platform-specific behavior
 
 ### Example

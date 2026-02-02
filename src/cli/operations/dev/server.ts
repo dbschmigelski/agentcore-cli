@@ -1,8 +1,8 @@
+import { getVenvExecutable } from '../../../lib/utils/platform';
 import { type ChildProcess, spawn, spawnSync } from 'child_process';
 import { existsSync } from 'fs';
 import { createServer } from 'net';
 import { join } from 'path';
-import { getVenvExecutable } from '../../../lib/utils/platform';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'system';
 

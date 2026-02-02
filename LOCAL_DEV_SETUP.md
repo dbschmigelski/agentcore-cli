@@ -1,6 +1,7 @@
 # Local Development Setup
 
-This guide explains how to set up the agentcore-cli for local development when the L3 constructs package is not yet published to npm.
+This guide explains how to set up the agentcore-cli for local development when the L3 constructs package is not yet
+published to npm.
 
 ## Prerequisites
 
@@ -49,7 +50,9 @@ Follow the prompts to create a new project.
 
 ### 5. Link the L3 Constructs in the Generated Project
 
-The generated CDK project includes a postinstall script that automatically attempts to link `@aws/agentcore-l3-cdk-constructs`. However, if npm install was run before you created the global link, you may need to manually link it:
+The generated CDK project includes a postinstall script that automatically attempts to link
+`@aws/agentcore-l3-cdk-constructs`. However, if npm install was run before you created the global link, you may need to
+manually link it:
 
 ```bash
 cd <your-project>/agentcore/cdk
@@ -79,6 +82,7 @@ npm run build
 ### "Cannot find module" errors
 
 Make sure you've built the L3 constructs package:
+
 ```bash
 cd agentcore-l3-cdk-constructs
 npm run build
@@ -87,6 +91,7 @@ npm run build
 ### Link not working
 
 Re-create the links:
+
 ```bash
 # In L3 constructs
 npm unlink
@@ -100,6 +105,7 @@ npm link @aws/agentcore-l3-cdk-constructs
 ### Changes not reflected
 
 Rebuild the L3 constructs package:
+
 ```bash
 cd agentcore-l3-cdk-constructs
 npm run build
