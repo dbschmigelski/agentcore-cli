@@ -1,6 +1,7 @@
 export { detectAwsContext, type AwsContext } from './aws-context';
 export { detectAccount, getCredentialProvider } from './account';
 export { detectRegion, type RegionDetectionResult } from './region';
+export { resolveTarget } from './target-resolver';
 export {
   invokeBedrockSync,
   invokeClaude,

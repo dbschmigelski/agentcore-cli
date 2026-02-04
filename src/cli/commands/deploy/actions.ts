@@ -1,4 +1,5 @@
 import { ConfigIO } from '../../../lib';
+import { resolveTarget } from '../../aws';
 import { createSwitchableIoHost } from '../../cdk/toolkit-lib';
 import { buildDeployedState, getStackOutputs, parseAgentOutputs } from '../../cloudformation';
 import { getErrorMessage } from '../../errors';
@@ -49,8 +50,8 @@ export async function handleDeploy(options: ValidatedDeployOptions): Promise<Dep
     // Load targets and find the specified one
     startStep('Load deployment target');
     const targets = await configIO.readAWSDeploymentTargets();
-    const target = targets.find(t => t.name === options.target);
-    if (!target) {
+    const savedTarget = targets.find(t => t.name === options.target);
+    if (!savedTarget) {
       endStep('error', `Target "${options.target}" not found`);
       logger.finalize(false);
       return {
@@ -59,6 +60,8 @@ export async function handleDeploy(options: ValidatedDeployOptions): Promise<Dep
         logPath: logger.getRelativeLogPath(),
       };
     }
+    // Apply environment variable overrides (AWS_REGION)
+    const target = resolveTarget(savedTarget);
     endStep('success');
 
     // Preflight: validate project

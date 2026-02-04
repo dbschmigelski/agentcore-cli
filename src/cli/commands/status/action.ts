@@ -1,6 +1,6 @@
 import { ConfigIO } from '../../../lib';
 import type { AgentCoreProjectSpec, AwsDeploymentTargets, DeployedState } from '../../../schema';
-import { getAgentRuntimeStatus } from '../../aws';
+import { getAgentRuntimeStatus, resolveTarget } from '../../aws';
 import { getErrorMessage } from '../../errors';
 
 export interface StatusContext {
@@ -76,11 +76,14 @@ export async function handleStatus(context: StatusContext, options: StatusOption
   }
 
   const targetState = selectedTargetName ? deployedState.targets[selectedTargetName] : undefined;
-  const targetConfig = awsTargets.find(target => target.name === selectedTargetName);
+  const savedTargetConfig = awsTargets.find(target => target.name === selectedTargetName);
 
-  if (!targetConfig) {
+  if (!savedTargetConfig) {
     return { success: false, error: `Target config '${selectedTargetName}' not found in aws-targets` };
   }
+
+  // Apply environment variable overrides (AWS_REGION)
+  const targetConfig = resolveTarget(savedTargetConfig);
 
   if (options.agentRuntimeId) {
     try {
@@ -168,11 +171,14 @@ export async function handleStatusAll(
   }
 
   const targetState = deployedState.targets[selectedTargetName];
-  const targetConfig = awsTargets.find(target => target.name === selectedTargetName);
+  const savedTargetConfig = awsTargets.find(target => target.name === selectedTargetName);
 
-  if (!targetConfig) {
+  if (!savedTargetConfig) {
     return { success: false, error: `Target config '${selectedTargetName}' not found in aws-targets` };
   }
+
+  // Apply environment variable overrides (AWS_REGION)
+  const targetConfig = resolveTarget(savedTargetConfig);
 
   if (project.agents.length === 0) {
     return { success: false, error: 'No agents defined in configuration' };

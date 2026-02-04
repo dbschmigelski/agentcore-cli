@@ -1,6 +1,6 @@
 import { ConfigIO } from '../../../lib';
 import type { AgentCoreProjectSpec, AwsDeploymentTargets, DeployedState } from '../../../schema';
-import { stopRuntimeSession as stopSession } from '../../aws';
+import { resolveTarget, stopRuntimeSession as stopSession } from '../../aws';
 import { clearSessionId } from '../../operations/session';
 
 export interface StopSessionContext {
@@ -57,11 +57,14 @@ export async function handleStopSession(
   }
 
   const targetState = deployedState.targets[selectedTargetName];
-  const targetConfig = awsTargets.find(t => t.name === selectedTargetName);
+  const savedTargetConfig = awsTargets.find(t => t.name === selectedTargetName);
 
-  if (!targetConfig) {
+  if (!savedTargetConfig) {
     return { success: false, error: `Target config '${selectedTargetName}' not found in aws-targets` };
   }
+
+  // Apply environment variable overrides (AWS_REGION)
+  const targetConfig = resolveTarget(savedTargetConfig);
 
   if (project.agents.length === 0) {
     return { success: false, error: 'No agents defined in configuration' };
