@@ -87,7 +87,6 @@ agentcore-cli invoke --stream
 
 | Command  | Description               |
 | -------- | ------------------------- |
-| `edit`   | Interactive schema editor |
 | `update` | Check for CLI updates     |
 
 ## Project Structure
