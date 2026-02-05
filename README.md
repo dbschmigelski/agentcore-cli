@@ -85,9 +85,9 @@ agentcore-cli invoke --stream
 
 ### Utilities
 
-| Command  | Description               |
-| -------- | ------------------------- |
-| `update` | Check for CLI updates     |
+| Command  | Description           |
+| -------- | --------------------- |
+| `update` | Check for CLI updates |
 
 ## Project Structure
 
