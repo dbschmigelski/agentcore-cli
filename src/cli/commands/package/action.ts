@@ -40,6 +40,7 @@ export interface PackageResult {
   error?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function handlePackage(context: PackageContext): Promise<PackageResult> {
   const { project, configBaseDir, targetAgent } = context;
   const results: PackageAgentResult[] = [];

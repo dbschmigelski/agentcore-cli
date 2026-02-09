@@ -75,6 +75,7 @@ export function useListNavigation<T>({
       const idx = isDisabled ? items.findIndex(item => !isDisabled(item)) : 0;
       setSelectedIndex(idx >= 0 ? idx : 0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
 
   // Find next non-disabled index in given direction
