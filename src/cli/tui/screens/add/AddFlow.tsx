@@ -289,14 +289,9 @@ export function AddFlow(props: AddFlowProps) {
 
   // Identity wizard - now uses AddIdentityFlow with mode selection
   if (flow.name === 'identity-wizard') {
-    // Wait for agents to load before rendering wizard
-    if (agents.length === 0) {
-      return null;
-    }
     return (
       <AddIdentityFlow
         isInteractive={props.isInteractive}
-        availableAgents={agents}
         onExit={props.onExit}
         onBack={() => setFlow({ name: 'select' })}
         onDeploy={props.onDeploy}

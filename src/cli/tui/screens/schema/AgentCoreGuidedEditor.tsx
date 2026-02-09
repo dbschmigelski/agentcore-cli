@@ -1,8 +1,11 @@
 import {
   AgentCoreProjectSpecSchema,
   BuildTypeSchema,
+  ModelProviderSchema,
   NetworkModeSchema,
   PythonRuntimeSchema,
+  SDKFrameworkSchema,
+  TargetLanguageSchema,
 } from '../../../../schema';
 import type { AgentCoreProjectSpec, PathType } from '../../../../schema';
 import { Cursor, Header, Panel, PathInput, ScreenLayout, SelectList } from '../../components';
@@ -239,7 +242,7 @@ function AgentCoreGuidedEditorBody(props: {
         issues: [] as IssueEntry[],
       };
     }
-    const runtimeArtifact = agent.runtime.artifact;
+    const runtimeArtifact = agent.build;
 
     const tabs: TabDef[] = [
       {
@@ -250,7 +253,6 @@ function AgentCoreGuidedEditorBody(props: {
           { id: 'schema-version', label: 'Schema Version', type: 'string', path: ['version'] },
           { id: 'schema-description', label: 'Description', type: 'string', path: ['description'] },
           { id: 'agent-name', label: 'Agent Name', type: 'string', path: ['agents', agentIndex, 'name'] },
-          { id: 'agent-id', label: 'Agent Id', type: 'string', path: ['agents', agentIndex, 'id'] },
         ],
       },
       {
@@ -713,7 +715,7 @@ function AgentCoreGuidedEditorBody(props: {
           <Box flexDirection="row" gap={1}>
             {draft.agents.map((agent, idx) => (
               <Text
-                key={agent.id || idx}
+                key={agent.name}
                 color={idx === agentIndex ? 'cyan' : undefined}
                 dimColor={idx !== agentIndex}
                 bold={idx === agentIndex}

@@ -80,21 +80,18 @@ export async function validateProject(): Promise<PreflightContext> {
 }
 
 /**
- * Validates that combined runtime names (projectName_runtimeName) don't exceed AWS limits.
+ * Validates that combined runtime names (projectName_agentName) don't exceed AWS limits.
  */
 function validateRuntimeNames(projectSpec: AgentCoreProjectSpec): void {
   const projectName = projectSpec.name;
   for (const agent of projectSpec.agents) {
-    const runtimeName = agent.runtime?.name;
-    if (runtimeName) {
-      const combinedName = `${projectName}_${runtimeName}`;
-      if (combinedName.length > MAX_RUNTIME_NAME_LENGTH) {
-        throw new Error(
-          `Runtime name too long: "${combinedName}" (${combinedName.length} chars). ` +
-            `AWS limits runtime names to ${MAX_RUNTIME_NAME_LENGTH} characters. ` +
-            `Shorten the project name or runtime.name in agentcore.json.`
-        );
-      }
+    const combinedName = `${projectName}_${agent.name}`;
+    if (combinedName.length > MAX_RUNTIME_NAME_LENGTH) {
+      throw new Error(
+        `Runtime name too long: "${combinedName}" (${combinedName.length} chars). ` +
+          `AWS limits runtime names to ${MAX_RUNTIME_NAME_LENGTH} characters. ` +
+          `Shorten the project name or agent name in agentcore.json.`
+      );
     }
   }
 }
