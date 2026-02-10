@@ -88,3 +88,44 @@ export function getCdkProjectDir(cwd?: string): string {
   const baseDir = cwd ?? process.cwd();
   return join(baseDir, CONFIG_DIR, 'cdk');
 }
+
+export interface StackTeardownResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Perform full stack teardown for a target: destroy CloudFormation stack,
+ * remove deployed-state entry, and remove the target from aws-targets.json.
+ */
+export async function performStackTeardown(targetName: string): Promise<StackTeardownResult> {
+  const cdkProjectDir = getCdkProjectDir();
+  const configIO = new ConfigIO();
+
+  const discovered = await discoverDeployedTargets();
+  const deployedTarget = discovered.deployedTargets.find(dt => dt.target.name === targetName);
+  if (deployedTarget) {
+    await destroyTarget({ target: deployedTarget, cdkProjectDir });
+  }
+
+  // Clean up deployed-state.json first (it validates against aws-targets.json),
+  // then remove the target from aws-targets.json.
+  // readDeployedState throws if the file doesn't exist, which is fine — skip cleanup.
+  // But if the file exists and we fail to write, let that error propagate.
+  try {
+    const deployedState = await configIO.readDeployedState();
+    delete deployedState.targets[targetName];
+    await configIO.writeDeployedState(deployedState);
+  } catch (err) {
+    // Only ignore "file not found" — rethrow anything else (e.g. write failures)
+    if (err instanceof Error && (err.message.includes('ENOENT') || err.message.includes('not found'))) {
+      // No deployed-state file — nothing to clean up
+    } else {
+      throw err;
+    }
+  }
+  const remainingTargets = (await configIO.readAWSDeploymentTargets()).filter(t => t.name !== targetName);
+  await configIO.writeAWSDeploymentTargets(remainingTargets);
+
+  return { success: true };
+}

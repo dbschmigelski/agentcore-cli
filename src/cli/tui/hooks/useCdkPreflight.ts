@@ -1,5 +1,5 @@
 import { SecureCredentials } from '../../../lib';
-import { AwsCredentialsError } from '../../aws/account';
+import { AwsCredentialsError, validateAwsCredentials } from '../../aws/account';
 import { type CdkToolkitWrapper, type SwitchableIoHost, createSwitchableIoHost } from '../../cdk/toolkit-lib';
 import { getErrorMessage, isExpiredTokenError, isNoCredentialsError } from '../../errors';
 import type { ExecLogger } from '../../logging';
@@ -25,6 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 type PreflightPhase =
   | 'idle'
   | 'running'
+  | 'teardown-confirm'
   | 'credentials-prompt'
   | 'identity-setup'
   | 'bootstrap-confirm'
@@ -65,6 +66,8 @@ export interface PreflightResult {
   /** KMS key ARN used for identity token vault encryption */
   identityKmsKeyArn?: string;
   startPreflight: () => Promise<void>;
+  confirmTeardown: () => void;
+  cancelTeardown: () => void;
   confirmBootstrap: () => void;
   skipBootstrap: () => void;
   /** Clear the token expired error state */
@@ -116,6 +119,7 @@ export function useCdkPreflight(options: PreflightOptions): PreflightResult {
   const [runtimeCredentials, setRuntimeCredentials] = useState<SecureCredentials | null>(null);
   const [skipIdentitySetup, setSkipIdentitySetup] = useState(false);
   const [identityKmsKeyArn, setIdentityKmsKeyArn] = useState<string | undefined>(undefined);
+  const [teardownConfirmed, setTeardownConfirmed] = useState(false);
 
   // Guard against concurrent runs (React StrictMode, re-renders, etc.)
   const isRunningRef = useRef(false);
@@ -175,6 +179,18 @@ export function useCdkPreflight(options: PreflightOptions): PreflightResult {
       void disposeWrapper();
     };
   }, [disposeWrapper]);
+
+  const confirmTeardown = useCallback(() => {
+    // Mark teardown as confirmed and restart the preflight flow
+    setTeardownConfirmed(true);
+    setPhase('running');
+    isRunningRef.current = false; // Allow the run to restart
+  }, []);
+
+  const cancelTeardown = useCallback(() => {
+    setPhase('error');
+    isRunningRef.current = false;
+  }, []);
 
   const confirmBootstrap = useCallback(() => {
     setPhase('bootstrapping');
@@ -263,6 +279,32 @@ export function useCdkPreflight(options: PreflightOptions): PreflightResult {
           setPhase('error');
           isRunningRef.current = false;
           return;
+        }
+
+        // Teardown confirmation: pause for user confirmation before proceeding
+        if (preflightContext.isTeardownDeploy && !teardownConfirmed) {
+          setPhase('teardown-confirm');
+          isRunningRef.current = false;
+          return;
+        }
+
+        // Validate AWS credentials (deferred for teardown deploys until after confirmation)
+        if (preflightContext.isTeardownDeploy) {
+          try {
+            await validateAwsCredentials();
+          } catch (err) {
+            const errorMsg = formatError(err);
+            logger.endStep('error', errorMsg);
+            if (isNoCredentialsError(err)) {
+              setHasCredentialsError(true);
+            }
+            const userMessage =
+              isInteractive && err instanceof AwsCredentialsError ? err.shortMessage : getErrorMessage(err);
+            updateStep(STEP_VALIDATE, { status: 'error', error: userMessage });
+            setPhase('error');
+            isRunningRef.current = false;
+            return;
+          }
         }
 
         // Step: Check dependencies (Node >= 18, uv for Python CodeZip)
@@ -426,7 +468,7 @@ export function useCdkPreflight(options: PreflightOptions): PreflightResult {
     return () => {
       process.off('unhandledRejection', handleUnhandledRejection);
     };
-  }, [phase, logger, switchableIoHost, isInteractive, skipIdentityCheck]);
+  }, [phase, logger, switchableIoHost, isInteractive, skipIdentityCheck, teardownConfirmed]);
 
   // Handle identity-setup phase (after user provides credentials)
   useEffect(() => {
@@ -602,6 +644,8 @@ export function useCdkPreflight(options: PreflightOptions): PreflightResult {
     missingCredentials,
     identityKmsKeyArn,
     startPreflight,
+    confirmTeardown,
+    cancelTeardown,
     confirmBootstrap,
     skipBootstrap,
     clearTokenExpiredError,

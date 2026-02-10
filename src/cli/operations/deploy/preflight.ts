@@ -12,6 +12,8 @@ export interface PreflightContext {
   projectSpec: AgentCoreProjectSpec;
   awsTargets: AwsDeploymentTarget[];
   cdkProject: LocalCdkProject;
+  /** True when agents array is empty but a deployed stack exists — deploy will tear down resources */
+  isTeardownDeploy: boolean;
 }
 
 export interface SynthResult {
@@ -70,20 +72,39 @@ export async function validateProject(): Promise<PreflightContext> {
   const projectSpec = await configIO.readProjectSpec();
   const awsTargets = await configIO.readAWSDeploymentTargets();
 
-  // Validate that at least one agent is defined
+  // Validate that at least one agent is defined, unless this is a teardown deploy.
+  //
+  // Teardown detection: when agents is empty but deployed-state.json records existing
+  // targets, the user has run `remove all` and wants to tear down AWS resources via deploy.
+  // deployed-state.json is written by the CLI after every successful deploy, so it is a
+  // reliable indicator of whether a CloudFormation stack exists for this project.
+  let isTeardownDeploy = false;
   if (!projectSpec.agents || projectSpec.agents.length === 0) {
-    throw new Error(
-      'No agents defined in project. Add at least one agent with "agentcore add agent" before deploying.'
-    );
+    let hasExistingStack = false;
+    try {
+      const deployedState = await configIO.readDeployedState();
+      hasExistingStack = Object.keys(deployedState.targets).length > 0;
+    } catch {
+      // No deployed state file — no existing stack
+    }
+    if (!hasExistingStack) {
+      throw new Error(
+        'No agents defined in project. Add at least one agent with "agentcore add agent" before deploying.'
+      );
+    }
+    isTeardownDeploy = true;
   }
 
   // Validate runtime names don't exceed AWS limits
   validateRuntimeNames(projectSpec);
 
-  // Validate AWS credentials before proceeding with build/synth
-  await validateAwsCredentials();
+  // Validate AWS credentials before proceeding with build/synth.
+  // Skip for teardown deploys — callers validate after teardown confirmation.
+  if (!isTeardownDeploy) {
+    await validateAwsCredentials();
+  }
 
-  return { projectSpec, awsTargets, cdkProject };
+  return { projectSpec, awsTargets, cdkProject, isTeardownDeploy };
 }
 
 /**

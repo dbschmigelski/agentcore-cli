@@ -1,4 +1,5 @@
 import { ConfigIO, SecureCredentials } from '../../../lib';
+import { validateAwsCredentials } from '../../aws/account';
 import { createSwitchableIoHost } from '../../cdk/toolkit-lib';
 import { buildDeployedState, getStackOutputs, parseAgentOutputs } from '../../cloudformation';
 import { getErrorMessage } from '../../errors';
@@ -10,6 +11,7 @@ import {
   checkStackDeployability,
   getAllCredentials,
   hasOwnedIdentityApiProviders,
+  performStackTeardown,
   setupApiKeyProviders,
   synthesizeCdk,
   validateProject,
@@ -66,6 +68,24 @@ export async function handleDeploy(options: ValidatedDeployOptions): Promise<Dep
     startStep('Validate project');
     const context = await validateProject();
     endStep('success');
+
+    // Teardown confirmation: if this is a teardown deploy, require --yes
+    if (context.isTeardownDeploy && !options.autoConfirm) {
+      logger.finalize(false);
+      return {
+        success: false,
+        error:
+          'This will delete all deployed resources and the CloudFormation stack. Run with --yes to confirm teardown.',
+        logPath: logger.getRelativeLogPath(),
+      };
+    }
+
+    // Validate AWS credentials (deferred for teardown deploys until after confirmation)
+    if (context.isTeardownDeploy) {
+      startStep('Validate AWS credentials');
+      await validateAwsCredentials();
+      endStep('success');
+    }
 
     // Ensure L3 constructs are linked (for local development)
     startStep('Link L3 constructs');
@@ -194,6 +214,31 @@ export async function handleDeploy(options: ValidatedDeployOptions): Promise<Dep
     }
 
     endStep('success');
+
+    if (context.isTeardownDeploy) {
+      // After deploying the empty spec, destroy the stack entirely
+      startStep('Tear down stack');
+      const teardown = await performStackTeardown(target.name);
+      if (!teardown.success) {
+        endStep('error', teardown.error);
+        logger.finalize(false);
+        return {
+          success: false,
+          error: `Stack teardown failed: ${teardown.error}`,
+          logPath: logger.getRelativeLogPath(),
+        };
+      }
+      endStep('success');
+
+      logger.finalize(true);
+
+      return {
+        success: true,
+        targetName: target.name,
+        stackName,
+        logPath: logger.getRelativeLogPath(),
+      };
+    }
 
     // Get stack outputs and persist state
     startStep('Persist deployment state');
