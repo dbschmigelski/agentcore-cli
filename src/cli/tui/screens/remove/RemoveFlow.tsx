@@ -63,6 +63,8 @@ interface RemoveFlowProps {
   force?: boolean;
   /** Initial resource type to start at (for CLI subcommands) */
   initialResourceType?: 'agent' | 'gateway' | 'mcp-tool' | 'memory' | 'identity' | 'target';
+  /** Initial resource name to auto-select (for CLI --name flag) */
+  initialResourceName?: string;
 }
 
 export function RemoveFlow({
@@ -71,6 +73,7 @@ export function RemoveFlow({
   onRequestDestroy,
   force = false,
   initialResourceType,
+  initialResourceName,
 }: RemoveFlowProps) {
   const getInitialState = (): FlowState => {
     if (!initialResourceType) return { name: 'select' };
@@ -161,6 +164,9 @@ export function RemoveFlow({
       }
     }
   }, [isInteractive, flow.name, onExit]);
+
+  // Track whether we've already triggered the initial resource selection
+  const hasTriggeredInitialSelection = useRef(false);
 
   const handleSelectResource = useCallback((resourceType: RemoveResourceType) => {
     switch (resourceType) {
@@ -323,6 +329,46 @@ export function RemoveFlow({
     [loadTargetPreview, force, removeTargetOp]
   );
 
+  // Auto-select resource when initialResourceName is provided and data is loaded
+  useEffect(() => {
+    if (!initialResourceName || isLoading || hasTriggeredInitialSelection.current) {
+      return;
+    }
+
+    // Only trigger once
+    hasTriggeredInitialSelection.current = true;
+
+    // Use setTimeout to avoid eslint cascading renders warning
+    setTimeout(() => {
+      switch (initialResourceType) {
+        case 'agent':
+          void handleSelectAgent(initialResourceName);
+          break;
+        case 'gateway':
+          void handleSelectGateway(initialResourceName);
+          break;
+        case 'memory':
+          void handleSelectMemory(initialResourceName);
+          break;
+        case 'identity':
+          void handleSelectIdentity(initialResourceName);
+          break;
+        case 'target':
+          void handleSelectTarget(initialResourceName);
+          break;
+      }
+    }, 0);
+  }, [
+    initialResourceName,
+    initialResourceType,
+    isLoading,
+    handleSelectAgent,
+    handleSelectGateway,
+    handleSelectMemory,
+    handleSelectIdentity,
+    handleSelectTarget,
+  ]);
+
   // Confirm handlers - pass preview for logging
   const handleConfirmAgent = useCallback(
     async (agentName: string, preview: RemovalPreview) => {
@@ -484,6 +530,10 @@ export function RemoveFlow({
 
   // Selection screens
   if (flow.name === 'select-agent') {
+    // If initialResourceName is provided, wait for data loading (which triggers auto-select)
+    if (initialResourceName && isLoading) {
+      return null;
+    }
     return (
       <RemoveAgentScreen
         agents={agents}
@@ -494,6 +544,9 @@ export function RemoveFlow({
   }
 
   if (flow.name === 'select-gateway') {
+    if (initialResourceName && isLoading) {
+      return null;
+    }
     return (
       <RemoveGatewayScreen
         gateways={gateways}
@@ -514,6 +567,9 @@ export function RemoveFlow({
   }
 
   if (flow.name === 'select-memory') {
+    if (initialResourceName && isLoading) {
+      return null;
+    }
     return (
       <RemoveMemoryScreen
         memories={memories}
@@ -524,6 +580,9 @@ export function RemoveFlow({
   }
 
   if (flow.name === 'select-identity') {
+    if (initialResourceName && isLoading) {
+      return null;
+    }
     return (
       <RemoveIdentityScreen
         identities={identities}
@@ -534,6 +593,9 @@ export function RemoveFlow({
   }
 
   if (flow.name === 'select-target') {
+    if (initialResourceName && isLoading) {
+      return null;
+    }
     return (
       <RemoveTargetScreen
         targets={targets}

@@ -12,6 +12,7 @@ import React from 'react';
 interface TUIRemoveOptions {
   force?: boolean;
   dryRun?: boolean;
+  name?: string;
 }
 
 function handleRemoveAllTUI(options: TUIRemoveOptions = {}): void {
@@ -28,12 +29,13 @@ function handleRemoveAllTUI(options: TUIRemoveOptions = {}): void {
   );
 }
 
-function handleRemoveResourceTUI(resourceType: ResourceType, options: { force?: boolean }): void {
+function handleRemoveResourceTUI(resourceType: ResourceType, options: { force?: boolean; name?: string }): void {
   const { clear, unmount } = render(
     <RemoveFlow
       isInteractive={false}
       force={options.force}
       initialResourceType={resourceType}
+      initialResourceName={options.name}
       onExit={() => {
         clear();
         unmount();
@@ -90,7 +92,7 @@ function registerResourceRemove(
             json: true,
           });
         } else {
-          handleRemoveResourceTUI(resourceType, { force: cliOptions.force });
+          handleRemoveResourceTUI(resourceType, { force: cliOptions.force, name: cliOptions.name });
         }
       } catch (error) {
         if (cliOptions.json) {

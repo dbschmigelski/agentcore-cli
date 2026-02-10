@@ -96,6 +96,38 @@ describe('remove command', () => {
       expect(json.success).toBe(false);
     });
 
+    it('removes existing agent with --name and --force (TUI mode)', async () => {
+      // Add another agent for this test
+      const addResult = await runCLI(
+        [
+          'add',
+          'agent',
+          '--name',
+          'TUITestAgent',
+          '--language',
+          'Python',
+          '--framework',
+          'Strands',
+          '--model-provider',
+          'Bedrock',
+          '--memory',
+          'none',
+          '--json',
+        ],
+        projectDir
+      );
+      expect(addResult.exitCode).toBe(0);
+
+      // Remove agent using TUI mode with --name and --force (no --json)
+      const result = await runCLI(['remove', 'agent', '--name', 'TUITestAgent', '--force'], projectDir);
+      expect(result.exitCode).toBe(0);
+
+      // Verify agent is removed from schema
+      const schema = JSON.parse(await readFile(join(projectDir, 'agentcore', 'agentcore.json'), 'utf-8'));
+      const agent = schema.agents.find((a: { name: string }) => a.name === 'TUITestAgent');
+      expect(agent, 'TUITestAgent should be removed from schema').toBeUndefined();
+    });
+
     it('removes existing agent', async () => {
       const result = await runCLI(['remove', 'agent', '--name', 'TestAgent', '--json'], projectDir);
       expect(result.exitCode).toBe(0);
