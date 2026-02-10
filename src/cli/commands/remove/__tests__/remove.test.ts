@@ -76,6 +76,24 @@ describe('remove command', () => {
       expect(json.success).toBe(false);
     });
 
+    it('removes existing target with --name and --force (TUI mode)', async () => {
+      // Add a target for this test
+      const addResult = await runCLI(
+        ['add', 'target', '--name', 'tui-test-target', '--account', '123456789012', '--region', 'us-west-2', '--json'],
+        projectDir
+      );
+      expect(addResult.exitCode).toBe(0);
+
+      // Remove target using TUI mode with --name and --force (no --json)
+      const result = await runCLI(['remove', 'target', '--name', 'tui-test-target', '--force'], projectDir);
+      expect(result.exitCode).toBe(0);
+
+      // Verify target is removed from schema
+      const targets = JSON.parse(await readFile(join(projectDir, 'agentcore', 'aws-targets.json'), 'utf-8'));
+      const target = targets.find((t: { name: string }) => t.name === 'tui-test-target');
+      expect(target, 'tui-test-target should be removed from schema').toBeUndefined();
+    });
+
     it('removes existing target', async () => {
       const result = await runCLI(['remove', 'target', '--name', 'test-target', '--json'], projectDir);
       expect(result.exitCode).toBe(0);
@@ -85,6 +103,26 @@ describe('remove command', () => {
       // Verify target is removed from schema
       const targets = JSON.parse(await readFile(join(projectDir, 'agentcore', 'aws-targets.json'), 'utf-8'));
       expect(targets.length, 'Target should be removed from schema').toBe(0);
+    });
+  });
+
+  describe('remove memory', () => {
+    it('removes existing memory with --name and --force (TUI mode)', async () => {
+      // Add a memory for this test
+      const addResult = await runCLI(
+        ['add', 'memory', '--name', 'TUITestMemory', '--strategies', 'SEMANTIC', '--json'],
+        projectDir
+      );
+      expect(addResult.exitCode).toBe(0);
+
+      // Remove memory using TUI mode with --name and --force (no --json)
+      const result = await runCLI(['remove', 'memory', '--name', 'TUITestMemory', '--force'], projectDir);
+      expect(result.exitCode).toBe(0);
+
+      // Verify memory is removed from schema
+      const schema = JSON.parse(await readFile(join(projectDir, 'agentcore', 'agentcore.json'), 'utf-8'));
+      const memory = schema.memories?.find((m: { name: string }) => m.name === 'TUITestMemory');
+      expect(memory, 'TUITestMemory should be removed from schema').toBeUndefined();
     });
   });
 
