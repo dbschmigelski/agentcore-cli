@@ -13,14 +13,12 @@ AgentCore with minimal configuration.
 ## 🚀 Jump Into AgentCore
 
 - **Node.js** 20.x or later
-- **AWS CLI** configured with credentials
 - **uv** for Python agents ([install](https://docs.astral.sh/uv/getting-started/installation/))
-- **AWS CDK** bootstrapped: `npx cdk bootstrap aws://ACCOUNT_ID/REGION`
 
 ## Installation
 
 ```bash
-npm install -g @aws/agentcore-cli
+npm install -g agentcore
 ```
 
 > **Public Preview**: If you previously used the
@@ -52,8 +50,6 @@ agentcore invoke
 # Deploy to AWS
 agentcore deploy
 
-# Invoke deployed agent with streaming
-agentcore invoke --stream
 ```
 
 ## Supported Frameworks
@@ -62,7 +58,6 @@ agentcore invoke --stream
 | ------------------- | ----------------------------- |
 | Strands             | AWS-native, streaming support |
 | LangChain/LangGraph | Graph-based workflows         |
-| AutoGen             | Multi-agent conversations     |
 | Google ADK          | Gemini models only            |
 | OpenAI Agents       | OpenAI models only            |
 
@@ -82,9 +77,9 @@ agentcore invoke --stream
 | Command    | Description                    |
 | ---------- | ------------------------------ |
 | `create`   | Create a new AgentCore project |
-| `validate` | Validate configuration files   |
+| `dev`     | Start local development server            |
 | `deploy`   | Deploy infrastructure to AWS   |
-| `status`   | Check deployment status        |
+| `invoke`   | Invoke deployed agents           |
 
 ### Resource Management
 
@@ -93,30 +88,16 @@ agentcore invoke --stream
 | `add`    | Add agents, memory, identity, targets |
 | `remove` | Remove resources from project         |
 
-### Development
-
-| Command   | Description                               |
-| --------- | ----------------------------------------- |
-| `dev`     | Start local development server            |
-| `invoke`  | Invoke local or deployed agents           |
-| `package` | Package agent artifacts without deploying |
-
-### Utilities
-
-| Command  | Description           |
-| -------- | --------------------- |
-| `update` | Check for CLI updates |
-
 ## Project Structure
 
 ```
 my-project/
 ├── agentcore/
-│   ├── agentcore.json      # Agent specifications
+|   |── .env.local          # API keys (gitignored)
+│   ├── agentcore.json      # Resource specifications
 │   ├── aws-targets.json    # Deployment targets
 │   └── cdk/                # CDK infrastructure
-├── app/                    # Agent code
-└── .env.local              # API keys (gitignored)
+├── app/                    # Application code
 ```
 
 ## Configuration
@@ -124,38 +105,25 @@ my-project/
 Projects use JSON schema files in the `agentcore/` directory:
 
 - `agentcore.json` - Agent specifications, memory, identity, remote tools
+- `deployed-state.json` - Runtime state in agentcore/.cli/ (auto-managed) 
 - `aws-targets.json` - Deployment targets (account, region)
-- `deployed-state.json` - Runtime state (auto-managed)
 
-## Primitives
+## Capabilities
 
 - **Memory** - Semantic, summarization, and user preference strategies
 - **Identity** - Secure API key management via Secrets Manager
-
-## Invoking Agents
-
-```bash
-# Interactive mode
-agentcore invoke
-
-# With prompt and streaming
-agentcore invoke "What can you do?" --stream
-
-# Session management
-agentcore invoke --session-id <id>   # Continue conversation
-agentcore invoke --new-session       # Start fresh
-```
 
 ## Documentation
 
 - [CLI Commands Reference](docs/commands.md) - Full command reference for scripting and CI/CD
 - [Configuration](docs/configuration.md) - Schema reference for config files
+- [Frameworks](docs/frameworks.md) - Supported frameworks and model providers
 - [Memory](docs/memory.md) - Memory strategies and sharing
 - [Local Development](docs/local-development.md) - Dev server and debugging
 
 ## Related Package
 
-- `@aws/agentcore-l3-cdk-constructs` - CDK constructs for standalone infrastructure-as-code usage
+- `/agentcore-cdk` CDK constructs for standalone infrastructure-as-code usage
 
 ## Roadmap
 
@@ -175,7 +143,7 @@ Found a bug or have a feature request? [Open an issue](https://github.com/aws/ag
 
 ## Security
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+See [SECURITY](SECURITY.md) for reporting vulnerabilities and security information.
 
 ## License
 
