@@ -147,7 +147,14 @@ export const registerDev = (program: Command) => {
                 console.log(`${prefix} ${msg}`);
                 logger.log(msg, level === 'error' ? 'error' : 'info');
               },
-              onExit: code => {
+              onExit: (code, recentErrors) => {
+                if (code !== 0 && recentErrors.length > 0) {
+                  console.error('\n--- Server error output ---');
+                  for (const line of recentErrors.slice(-10)) {
+                    console.error(line);
+                  }
+                  console.error('---');
+                }
                 console.log(`\nServer exited with code ${code ?? 0}`);
                 logger.finalize(code === 0);
                 process.exit(code ?? 0);

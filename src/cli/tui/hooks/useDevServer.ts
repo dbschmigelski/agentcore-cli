@@ -34,6 +34,7 @@ export function useDevServer(options: { workingDir: string; port: number; agentN
   const [isStreaming, setIsStreaming] = useState(false);
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const [streamingResponse, setStreamingResponse] = useState<string | null>(null);
+  const [errorOutput, setErrorOutput] = useState<string | null>(null);
   const [project, setProject] = useState<AgentCoreProjectSpec | null>(null);
   const [configRoot, setConfigRoot] = useState<string | undefined>(undefined);
   const [envVars, setEnvVars] = useState<Record<string, string>>({});
@@ -138,7 +139,7 @@ export function useDevServer(options: { workingDir: string; port: number; agentN
               addLog(level, message);
             }
           },
-          onExit: code => {
+          onExit: (code, recentErrors) => {
             // Ignore exit events from stale server instances
             if (instanceIdRef.current !== currentInstanceId) return;
 
@@ -150,6 +151,11 @@ export function useDevServer(options: { workingDir: string; port: number; agentN
 
             setStatus(code === 0 ? 'stopped' : 'error');
             addLog('system', `Server exited (code ${code})`);
+
+            // Surface recent stderr output when the server crashes
+            if (code !== 0 && recentErrors.length > 0) {
+              setErrorOutput(recentErrors.slice(-10).join('\n'));
+            }
           },
         },
       });
@@ -218,6 +224,7 @@ export function useDevServer(options: { workingDir: string; port: number; agentN
     isRestartingRef.current = true;
     killServer(serverRef.current);
     setStatus('starting');
+    setErrorOutput(null);
     setRestartTrigger(t => t + 1);
   };
 
@@ -238,6 +245,7 @@ export function useDevServer(options: { workingDir: string; port: number; agentN
     isStreaming,
     conversation,
     streamingResponse,
+    errorOutput,
     config,
     configLoaded,
     actualPort,

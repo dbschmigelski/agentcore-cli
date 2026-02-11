@@ -8,7 +8,7 @@ export type LogLevel = 'info' | 'warn' | 'error' | 'system';
 
 export interface DevServerCallbacks {
   onLog: (level: LogLevel, message: string) => void;
-  onExit: (code: number | null) => void;
+  onExit: (code: number | null, recentErrors: string[]) => void;
 }
 
 export function findAvailablePort(startPort: number): Promise<number> {
@@ -80,8 +80,13 @@ function ensurePythonVenv(cwd: string, onLog: (level: LogLevel, message: string)
   onLog('info', 'Installing dependencies...');
   const syncResult = spawnSync('uv', ['sync'], { cwd, stdio: 'pipe' });
   if (syncResult.status !== 0) {
+    // Surface the actual uv sync error so users know why it failed
+    const syncStderr = syncResult.stderr?.toString().trim();
+    if (syncStderr) {
+      onLog('warn', `uv sync failed: ${syncStderr}`);
+    }
     // Fallback: try installing uvicorn directly if uv sync fails
-    onLog('warn', 'uv sync failed, trying direct uvicorn install...');
+    onLog('warn', 'Trying direct uvicorn install...');
     const pipResult = spawnSync('uv', ['pip', 'install', 'uvicorn'], { cwd, stdio: 'pipe' });
     if (pipResult.status !== 0) {
       onLog('error', `Failed to install dependencies: ${pipResult.stderr?.toString() || 'unknown error'}`);
@@ -109,7 +114,7 @@ export function spawnDevServer(options: SpawnDevServerOptions): ChildProcess | n
 
   // For Python, ensure venv exists before starting
   if (isPython && !ensurePythonVenv(cwd, onLog)) {
-    onExit(1);
+    onExit(1, []);
     return null;
   }
 
@@ -125,6 +130,10 @@ export function spawnDevServer(options: SpawnDevServerOptions): ChildProcess | n
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+  // Circular buffer to capture recent stderr lines for surfacing on crash
+  const MAX_RECENT_ERRORS = 20;
+  const recentErrors: string[] = [];
+
   child.stdout?.on('data', (data: Buffer) => {
     const output = data.toString().trim();
     if (!output) return;
@@ -138,6 +147,13 @@ export function spawnDevServer(options: SpawnDevServerOptions): ChildProcess | n
     if (!output) return;
     for (const line of output.split('\n')) {
       if (!line) continue;
+
+      // Add to circular buffer
+      recentErrors.push(line);
+      if (recentErrors.length > MAX_RECENT_ERRORS) {
+        recentErrors.shift();
+      }
+
       if (line.includes('WARNING')) onLog('warn', line);
       else if (line.includes('ERROR') || line.includes('error')) onLog('error', line);
       else onLog('info', line);
@@ -146,10 +162,10 @@ export function spawnDevServer(options: SpawnDevServerOptions): ChildProcess | n
 
   child.on('error', err => {
     onLog('error', `Failed to start: ${err.message}`);
-    onExit(1);
+    onExit(1, recentErrors);
   });
 
-  child.on('exit', code => onExit(code));
+  child.on('exit', code => onExit(code, recentErrors));
 
   return child;
 }

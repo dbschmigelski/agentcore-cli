@@ -151,6 +151,7 @@ export function DevScreen(props: DevScreenProps) {
     isStreaming,
     conversation,
     streamingResponse,
+    errorOutput,
     config,
     configLoaded,
     actualPort,
@@ -410,6 +411,20 @@ export function DevScreen(props: DevScreenProps) {
   return (
     <Screen title="Dev Server" onExit={handleExit} helpText={helpText} headerContent={headerContent}>
       <Box flexDirection="column" flexGrow={1}>
+        {/* Error output - shown when server crashes */}
+        {status === 'error' && errorOutput && (
+          <Box flexDirection="column" marginBottom={1}>
+            <Text color="red" bold>
+              Server crashed. Recent output:
+            </Text>
+            {errorOutput.split('\n').map((line, idx) => (
+              <Text key={idx} color="red" wrap="truncate">
+                {line}
+              </Text>
+            ))}
+          </Box>
+        )}
+
         {/* Conversation display - always visible when there's content */}
         {(conversation.length > 0 || isStreaming) && (
           <Box flexDirection="column" height={needsScroll ? displayHeight : undefined}>

@@ -134,6 +134,9 @@ agentcore add agent \
 | `--entrypoint <file>`    | Entry file (BYO only)                 |
 | `--json`                 | JSON output                           |
 
+> **Note:** BYO Python agents require a `pyproject.toml` for dependency management. The CLI uses `uv sync` to install
+> dependencies from `pyproject.toml`; `requirements.txt` alone is not currently supported.
+
 ### add memory
 
 Add a memory resource. Memory is a top-level resource in the flat resource model.
