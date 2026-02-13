@@ -7,7 +7,7 @@ for existing code.
 
 | Framework               | Supported Model Providers          |
 | ----------------------- | ---------------------------------- |
-| **Strands Agents**             | Bedrock, Anthropic, OpenAI, Gemini |
+| **Strands Agents**      | Bedrock, Anthropic, OpenAI, Gemini |
 | **LangChain_LangGraph** | Bedrock, Anthropic, OpenAI, Gemini |
 | **GoogleADK**           | Gemini only                        |
 | **OpenAIAgents**        | OpenAI only                        |
