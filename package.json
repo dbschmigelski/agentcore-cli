@@ -2,6 +2,31 @@
   "name": "@aws/agentcore",
   "version": "0.3.0-preview.1.0",
   "description": "CLI for Amazon Bedrock AgentCore",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aws/agentcore-cli.git"
+  },
+  "homepage": "https://github.com/aws/agentcore-cli",
+  "bugs": {
+    "url": "https://github.com/aws/agentcore-cli/issues"
+  },
+  "keywords": [
+    "aws",
+    "amazon",
+    "bedrock",
+    "agentcore",
+    "cli",
+    "agents",
+    "ai",
+    "cdk",
+    "langchain",
+    "langgraph",
+    "openai",
+    "anthropic",
+    "google-adk",
+    "strands"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
