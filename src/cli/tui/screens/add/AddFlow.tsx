@@ -247,13 +247,14 @@ export function AddFlow(props: AddFlowProps) {
           !flow.loading && (
             <Box flexDirection="column">
               <AgentAddedSummary config={flow.config} projectName={flow.projectName} projectPath={flow.projectPath} />
-              <Box marginTop={1}>
+              <Box marginTop={1} flexDirection="column">
                 <Text color="yellow">
                   Note: {memoryNotePrefix}
                   <Link url={`https://github.com/aws/agentcore-cli/blob/main/docs/memory.md${memoryDocAnchor}`}>
                     <Text color="cyan">docs/memory.md</Text>
                   </Link>
                 </Text>
+                <Text dimColor>https://github.com/aws/agentcore-cli/blob/main/docs/memory.md</Text>
               </Box>
             </Box>
           )
@@ -287,13 +288,14 @@ export function AddFlow(props: AddFlowProps) {
           !flow.loading && (
             <Box flexDirection="column">
               <AgentAddedSummary config={flow.config} projectName={flow.projectName} />
-              <Box marginTop={1}>
+              <Box marginTop={1} flexDirection="column">
                 <Text color="yellow">
                   Note: {memoryNotePrefix}
                   <Link url={`https://github.com/aws/agentcore-cli/blob/main/docs/memory.md${memoryDocAnchor}`}>
                     <Text color="cyan">docs/memory.md</Text>
                   </Link>
                 </Text>
+                <Text dimColor>https://github.com/aws/agentcore-cli/blob/main/docs/memory.md</Text>
               </Box>
             </Box>
           )
